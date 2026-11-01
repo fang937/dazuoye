@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.aftersales.mapper.WarehouseRecordMapper">
+
+    <select id="findByAfterSaleId" resultType="com.example.aftersales.entity.WarehouseRecordEntity">
+        SELECT id, after_sale_id, received_by, received_at, inspection_result, inspector_id, inspected_at,
+               abnormal_reason, reissue_no, refund_amount, refund_result, operator_id, finalized_at, final_note
+        FROM warehouse_record
+        WHERE after_sale_id = #{afterSaleId}
+    </select>
+
+    <!--
+        仓库登记收货：这张记录第一次出现，验货结论此时还是 PENDING。
+        这里不能用 useGeneratedKeys：入参是多个 @Param，MyBatis 无法决定把自增 id
+        回填给哪一个（实测报 "Could not determine which parameter to assign generated keys to"），
+        而业务上也用不到这个 id。
+    -->
+    <insert id="insertReceived">
+        INSERT INTO warehouse_record (after_sale_id, received_by, received_at, inspection_result)
+        VALUES (#{afterSaleId}, #{receivedBy}, #{receivedAt}, 'PENDING')
+    </insert>
+
+    <update id="updateInspection">
+        UPDATE warehouse_record
+        SET inspection_result = #{result},
+            inspector_id      = #{inspectorId},
+            inspected_at      = #{inspectedAt},
+            abnormal_reason   = #{abnormalReason}
+        WHERE after_sale_id = #{afterSaleId}
+    </update>
+
+    <update id="updateFinalization">
+        UPDATE warehouse_record
+        SET reissue_no    = #{reissueNo},
+            refund_amount = #{refundAmount},
+            refund_result = #{refundResult},
+            operator_id   = #{operatorId},
+            finalized_at  = #{finalizedAt},
+            final_note    = #{finalNote}
+        WHERE after_sale_id = #{afterSaleId}
+    </update>
+</mapper>

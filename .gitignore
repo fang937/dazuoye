@@ -1,1 +1,14 @@
-.zcode/ 
+# 依赖与构建产物（README 中给出了重新生成的命令）
+frontend/node_modules/
+frontend/dist/
+backend/target/
+backend/src/main/resources/static/
+
+# 本地环境与日志
+.env
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/

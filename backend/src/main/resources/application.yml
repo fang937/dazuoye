@@ -1,0 +1,20 @@
+server:
+  # 与课堂 3-5 Demo (8081) 错开，两个项目可同时启动。
+  port: ${SERVER_PORT:8082}
+
+spring:
+  application:
+    name: aftersales-demo
+  datasource:
+    # 本机 MySQL 账号密码优先通过环境变量注入，避免把真实密码写进代码。
+    # PowerShell 示例： $env:DB_USERNAME='root'; $env:DB_PASSWORD='你的密码'
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:aftersales_demo}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:123456}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    # 数据库的 created_at 自动映射到 Java 的 createdAt。
+    map-underscore-to-camel-case: true

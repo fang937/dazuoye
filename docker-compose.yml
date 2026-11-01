@@ -1,0 +1,64 @@
+# ============================================================
+# 一键起完整系统：MySQL 8 + 应用（Vue 前端已打进应用镜像）
+#
+#   docker compose up -d --build     # 第一次构建并启动
+#   docker compose ps                # 看健康状态
+#   docker compose logs -f app       # 看应用日志
+#   docker compose down              # 停止（保留数据）
+#   docker compose down -v           # 停止并清空数据库，下次启动会重新执行 init.sql
+#
+# 访问：http://localhost:8082/
+# ============================================================
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: aftersales-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_DATABASE: aftersales_demo
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      # 宿主机 3307 → 容器 3306，避免和本机已装的 MySQL 抢端口
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      # 只在数据卷为空时执行一次；想重放演示数据用 docker compose down -v
+      - ./backend/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+
+  app:
+    build: .
+    image: aftersales-demo:1.0.0
+    container_name: aftersales-app
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: aftersales_demo
+      DB_USERNAME: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      SERVER_PORT: 8082
+      TZ: Asia/Shanghai
+    ports:
+      - "8082:8082"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8082/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 40s
+    restart: unless-stopped
+
+volumes:
+  mysql-data:

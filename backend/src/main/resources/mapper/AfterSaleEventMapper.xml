@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.aftersales.mapper.AfterSaleEventMapper">
+
+    <insert id="insert"
+            useGeneratedKeys="true"
+            keyProperty="id"
+            keyColumn="id">
+        INSERT INTO after_sale_event (after_sale_id, operator_id, operator_role, operator_name,
+                                      action, from_status, to_status, note)
+        VALUES (#{afterSaleId}, #{operatorId}, #{operatorRole}, #{operatorName},
+                #{action}, #{fromStatus}, #{toStatus}, #{note})
+    </insert>
+
+    <select id="listByAfterSaleId" resultType="com.example.aftersales.entity.AfterSaleEventEntity">
+        SELECT id, after_sale_id, operator_id, operator_role, operator_name,
+               action, from_status, to_status, note, created_at
+        FROM after_sale_event
+        WHERE after_sale_id = #{afterSaleId}
+        ORDER BY created_at ASC, id ASC
+    </select>
+</mapper>

@@ -1,0 +1,14 @@
+# 构建上下文只需要源码：依赖、构建产物、本地环境文件都不进镜像
+frontend/node_modules
+frontend/dist
+backend/target
+backend/src/main/resources/static
+
+.git
+.gitignore
+.idea
+.vscode
+*.log
+*.md
+docker-compose*.yml
+mysql-data

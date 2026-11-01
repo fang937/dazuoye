@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.aftersales.mapper.AfterSaleMapper">
+
+    <!--
+        列表与详情共用的一组连接列：一张售后单要同时说清楚
+        「谁申请的、针对哪件商品、什么时候到期、现在卡在哪个状态」，
+        所以这里固定把 after_sale / order_item / mock_order / sys_user 四张表连起来。
+    -->
+    <sql id="viewColumns">
+        a.id,
+        a.after_sale_no,
+        a.type,
+        a.reason_code,
+        a.quantity,
+        a.description,
+        a.evidence_url,
+        a.status,
+        a.closed_at,
+        a.created_at,
+        a.updated_at,
+        a.consumer_id,
+        u.display_name        AS consumerName,
+        o.order_no            AS orderNo,
+        a.order_item_id,
+        oi.product_name       AS productName,
+        oi.spec               AS spec,
+        oi.unit_price         AS unitPrice,
+        oi.quantity           AS itemQuantity,
+        oi.after_sale_deadline AS afterSaleDeadline
+    </sql>
+
+    <sql id="viewJoins">
+        FROM after_sale a
+                 JOIN order_item oi ON oi.id = a.order_item_id
+                 JOIN mock_order o ON o.id = oi.order_id
+                 JOIN sys_user u ON u.id = a.consumer_id
+    </sql>
+
+    <insert id="insert"
+            useGeneratedKeys="true"
+            keyProperty="id"
+            keyColumn="id">
+        INSERT INTO after_sale (after_sale_no, order_item_id, consumer_id, type, reason_code,
+                                quantity, description, evidence_url, status)
+        VALUES (#{afterSaleNo}, #{orderItemId}, #{consumerId}, #{type}, #{reasonCode},
+                #{quantity}, #{description}, #{evidenceUrl}, #{status})
+    </insert>
+
+    <select id="findById" resultType="com.example.aftersales.entity.AfterSaleEntity">
+        SELECT id, after_sale_no, order_item_id, consumer_id, type, reason_code, quantity,
+               description, evidence_url, status, closed_at, created_at, updated_at
+        FROM after_sale
+        WHERE id = #{id}
+    </select>
+
+    <select id="findViewById" resultType="com.example.aftersales.vo.AfterSaleView">
+        SELECT <include refid="viewColumns"/>
+        <include refid="viewJoins"/>
+        WHERE a.id = #{id}
+    </select>
+
+    <select id="listViewsByConsumer" resultType="com.example.aftersales.vo.AfterSaleView">
+        SELECT <include refid="viewColumns"/>
+        <include refid="viewJoins"/>
+        WHERE a.consumer_id = #{consumerId}
+        ORDER BY a.id DESC
+    </select>
+
+    <!-- 客服工作台和仓库工作台的队列：只捞还轮到自己处理的状态 -->
+    <select id="listViewsByStatuses" resultType="com.example.aftersales.vo.AfterSaleView">
+        SELECT <include refid="viewColumns"/>
+        <include refid="viewJoins"/>
+        WHERE a.status IN
+        <foreach collection="statuses" item="status" open="(" separator="," close=")">
+            #{status}
+        </foreach>
+        ORDER BY a.updated_at DESC, a.id DESC
+    </select>
+
+    <select id="listAllViews" resultType="com.example.aftersales.vo.AfterSaleView">
+        SELECT <include refid="viewColumns"/>
+        <include refid="viewJoins"/>
+        ORDER BY a.id DESC
+    </select>
+
+    <!-- 状态机唯一写入口：其他任何地方都不允许直接改 after_sale.status -->
+    <update id="updateStatus">
+        UPDATE after_sale
+        SET status = #{status}
+        <if test="closedAt != null">
+            , closed_at = #{closedAt}
+        </if>
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateEvidence">
+        UPDATE after_sale
+        SET evidence_url = #{evidenceUrl},
+            description  = #{description}
+        WHERE id = #{id}
+    </update>
+
+    <!-- 被拒绝的申请不占用可售后数量，其他状态一律占用 -->
+    <select id="sumOccupiedQuantity" resultType="int">
+        SELECT IFNULL(SUM(quantity), 0)
+        FROM after_sale
+        WHERE order_item_id = #{orderItemId}
+          AND status &lt;&gt; 'REJECTED'
+    </select>
+
+    <select id="findInProgressByItemId" resultType="com.example.aftersales.entity.AfterSaleEntity">
+        SELECT id, after_sale_no, order_item_id, consumer_id, type, reason_code, quantity,
+               description, evidence_url, status, closed_at, created_at, updated_at
+        FROM after_sale
+        WHERE order_item_id = #{orderItemId}
+          AND status NOT IN ('REJECTED', 'EXCHANGE_DONE', 'REFUND_DONE')
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+</mapper>

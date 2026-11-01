@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.aftersales.mapper.UserMapper">
+
+    <!-- 演示账号列表：登录页展示用，故意不查 password -->
+    <select id="findAll" resultType="com.example.aftersales.entity.UserEntity">
+        SELECT id, username, display_name, role, created_at
+        FROM sys_user
+        ORDER BY id
+    </select>
+
+    <!-- 登录校验才需要密码，这条语句只在 AuthServiceImpl 里使用 -->
+    <select id="findByUsername" resultType="com.example.aftersales.entity.UserEntity">
+        SELECT id, username, password, display_name, role, created_at
+        FROM sys_user
+        WHERE username = #{username}
+    </select>
+
+    <select id="findById" resultType="com.example.aftersales.entity.UserEntity">
+        SELECT id, username, display_name, role, created_at
+        FROM sys_user
+        WHERE id = #{id}
+    </select>
+</mapper>
